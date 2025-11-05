@@ -1,0 +1,80 @@
+﻿@using ProdutividadeApp.Controls
+
+@inject NavigationManager Nav
+
+<div class="sidebar @(MenuOpen ? "open" : "")">
+    <div class="nav-header">
+        <h3>Menu</h3>
+        <button class="close-menu" @onclick="ToggleMenuInternal">×</button>
+    </div>
+
+    <div class="nav-content">
+        <div class="nav-item">
+            <a href="/" @onclick="ToggleMenuInternal">
+                <span class="menu-icon">🏠</span>
+                <span>Início</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="/mood" @onclick="ToggleMenuInternal">
+                <span class="menu-icon">😊</span>
+                <span>Registar Humor</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="/produtividade" @onclick="ToggleMenuInternal">
+                <span class="menu-icon">⚡</span>
+                <span>Produtividade</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="/historico" @onclick="ToggleMenuInternal">
+                <span class="menu-icon">📜</span>
+                <span>Histórico</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="/charts" @onclick="ToggleMenuInternal">
+                <span class="menu-icon">📊</span>
+                <span>Gráficos</span>
+            </a>
+        </div>
+        <div class="nav-item logout">
+            <a href="#" @onclick="Logout" @onclick:preventDefault>
+                <span class="menu-icon">🚪</span>
+                <span>Sair</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+@if (MenuOpen)
+{
+    <div class="backdrop" @onclick="ToggleMenuInternal"></div>
+}
+
+@code {
+    [Parameter]
+    public bool MenuOpen { get; set; } = false;
+
+    [Parameter]
+    public EventCallback<bool> MenuOpenChanged { get; set; }
+
+    private async Task ToggleMenuInternal()
+    {
+        MenuOpen = !MenuOpen;
+        await MenuOpenChanged.InvokeAsync(MenuOpen);
+    }
+
+    void Logout()
+    {
+        PessoaSessao.IdAtual = 0;
+        Nav.NavigateTo("/login");
+        MenuOpen = false;
+    }
+
+    protected override void OnInitialized()
+    {
+        CheckLogin.Verificar(Nav);
+    }
+}

@@ -1,0 +1,128 @@
+﻿@using ProdutividadeApp.Models
+@using ProdutividadeApp.Pages
+@using ProdutividadeApp.Controllers
+@inject RegistryService RegistryService
+@inject MoodService MoodService
+@inject ProductivityService ProductivityService
+@inject EmotionService EmotionService
+
+<div class="chart-container" id="chartContainer">
+    <h3 class="chart-title">Produtividade Semanal</h3>
+
+    @if (Dados?.Count == 7)
+    {
+        <div class="chart-wrapper">
+            <div class="chart-area">
+                @for (int i = 0; i <= 5; i++)
+                {
+                    var bottom = 40 + (i * 40);
+                    var percent = i * 20;
+                    <div class="chart-grid" style="bottom: @(bottom)px;">
+                        <span class="grid-label">@percent%</span>
+                    </div>
+                }
+
+                <div class="chart-y-axis"></div>
+                <div class="chart-x-axis"></div>
+
+                @for (int i = 0; i < 7; i++)
+                {
+                    var value = produtividade[i];
+                    var barColor = GetBarColor(value);
+                    var textColor = GetValueColor(value);
+                    var height = value * 2;
+                    var animationDelay = i * 0.1;
+
+                    <div class="chart-column" @onclick="() => ShowDayDetails(i)" style="animation-delay: @(animationDelay)s;">
+                        <div class="chart-bar" style="height: @(height)px; background: linear-gradient(to top, @barColor, rgba(255,255,255,0.9)); animation-delay: @(animationDelay)s;">
+                            <div class="bar-emoji">@emojis[i]</div>
+                        </div>
+                        <div class="bar-value" style="color: @textColor">@value%</div>
+                        <div class="bar-label">@dias[i]</div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <p class="chart-average">📈 Média semanal: <strong>@produtividade.Average().ToString("F1")%</strong></p>
+
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background-color: #D32F2F"></div><span>Baixa</span></div>
+            <div class="legend-item"><div class="legend-color" style="background-color: #F57C00"></div><span>Média-Baixa</span></div>
+            <div class="legend-item"><div class="legend-color" style="background-color: #8E24AA"></div><span>Média</span></div>
+            <div class="legend-item"><div class="legend-color" style="background-color: #1976D2"></div><span>Boa</span></div>
+            <div class="legend-item"><div class="legend-color" style="background-color: #388E3C"></div><span>Excelente</span></div>
+        </div>
+
+        <button class="btn-export" @onclick="DownloadChartImage">📸 Exportar como imagem</button>
+    }
+    else
+    {
+        <div class="no-data">
+            <p>Sem dados suficientes para gerar gráfico.</p>
+            <p>Registe seu humor e produtividade por 7 dias para visualizar.</p>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<DailyChartData> Dados { get; set; } = new();
+    private List<int> produtividade = new();
+    private List<string> emojis = new();
+    private List<string> dias = new();
+
+    [Inject] private IJSRuntime JS { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (Dados?.Count != 7) return;
+
+        produtividade = Dados.Select(d => d.Value).ToList();
+        emojis = Dados.Select(d => string.IsNullOrWhiteSpace(d.Emoji) ? "❓" : d.Emoji).ToList();
+        dias = Dados.Select(d => string.IsNullOrWhiteSpace(d.Label) ? "?" : d.Label).ToList();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && Dados?.Count == 7)
+        {
+            await JS.InvokeVoidAsync("animateChartBars");
+        }
+    }
+
+    private string GetBarColor(int value)
+    {
+        if (value == 0) return "#777777";
+        if (value < 20) return "#D32F2F";
+        if (value < 40) return "#F57C00";
+        if (value < 60) return "#8E24AA";
+        if (value < 80) return "#1976D2";
+        return "#388E3C";
+    }
+
+    private string GetValueColor(int value) => value < 40 ? "#d32f2f" : "#333";
+
+    private async Task ShowDayDetails(int dayIndex)
+    {
+        if (Dados?.Count > dayIndex)
+        {
+            var day = Dados[dayIndex];
+            string message = $"Dia: {day.Label}\n" +
+                           $"Data: {day.Date.ToShortDateString()}\n" +
+                           $"Produtividade: {day.Value}%\n" +
+                           $"Humor: {day.Emoji}";
+
+            if (!string.IsNullOrWhiteSpace(day.Description))
+            {
+                message += $"\nDescrição: {day.Description}";
+            }
+
+            await JS.InvokeVoidAsync("showDayDetails", message, dias[dayIndex], emojis[dayIndex]);
+        }
+    }
+
+    private async Task DownloadChartImage()
+    {
+        await JS.InvokeVoidAsync("downloadChartImage", "chartContainer");
+    }
+}

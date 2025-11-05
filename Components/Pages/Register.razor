@@ -1,0 +1,65 @@
+﻿@page "/register"
+@inject ProdutividadeApp.Services.PessoaService PessoaService
+@inject NavigationManager Nav
+
+<h3>Criar Conta</h3>
+
+<EditForm Model="novaPessoa" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-login">
+        <div class="input-group">
+            <label for="nome">Nome</label>
+            <input id="nome" placeholder="Digite seu nome" @bind="novaPessoa.Nome" />
+        </div>
+
+        <div class="input-group">
+            <label for="email">Email</label>
+            <input id="email" placeholder="Digite seu email" @bind="novaPessoa.Email" type="email" />
+        </div>
+
+        <div class="input-group">
+            <label for="password">Password</label>
+            <input id="password" placeholder="Digite sua senha" @bind="novaPessoa.Password" type="password" />
+        </div>
+
+        <div class="input-group">
+            <label for="idade">Idade</label>
+            <input id="idade" placeholder="Anos" @bind="novaPessoa.Idade" type="number" />
+        </div>
+
+        <div class="input-group">
+            <label for="peso">Peso</label>
+            <input id="peso" placeholder="Kg" @bind="novaPessoa.Peso" type="number" />
+        </div>
+
+        <div class="input-group">
+            <label for="altura">Altura</label>
+            <input id="altura" placeholder="M" @bind="novaPessoa.Altura" type="number" step="0.01" />
+        </div>
+
+        <button type="submit">Criar Conta</button>
+    </div>
+</EditForm>
+
+@code {
+    private Pessoa novaPessoa = new();
+
+    private async Task HandleValidSubmit()
+    {
+        var pessoas = await PessoaService.GetAllAsync();
+
+        // prevenir duplicado por email
+        if (pessoas.Any(p => p.Email == novaPessoa.Email))
+        {
+            Console.WriteLine("❌ Já existe uma conta com esse email.");
+            return;
+        }
+
+        await PessoaService.SaveAsync(novaPessoa);
+        PessoaSessao.IdAtual = novaPessoa.Id;
+        Console.WriteLine($"✅ Conta criada. ID atual: {PessoaSessao.IdAtual}");
+        Nav.NavigateTo("/");
+    }
+}

@@ -1,0 +1,63 @@
+﻿@page "/produtividade/{MoodId:int}"
+@using ProdutividadeApp.Controllers
+@using ProdutividadeApp.Models
+@using ProdutividadeApp.Services
+@inject NavigationManager Nav
+@inject ProductivityService ProductivityService
+@inject RegistryService RegistryService
+@inject MoodService MoodService
+
+<h2 class="titulo">Quanto produziste hoje? ⚙️</h2>
+
+<input type="range" min="0" max="100" @bind="nivelProdutividade" />
+<p>Produtividade: <strong>@nivelProdutividade%</strong></p>
+
+<textarea @bind="descricao" placeholder="O que fizeste hoje?" class="descricao-textarea"></textarea>
+<button @onclick="GuardarProdutividade" class="btn-guardar">Guardar tudo</button>
+
+@code {
+    [Parameter] public int MoodId { get; set; }
+
+    int nivelProdutividade = 50;
+    string descricao = string.Empty;
+
+    async Task GuardarProdutividade()
+    {
+        try
+        {
+            var produtividade = await ProductivityController.RegistarProdutividade(ProductivityService, nivelProdutividade, descricao);
+
+            // Verifica se a sessão está válida
+            if (PessoaSessao.IdAtual == 0)
+            {
+                Console.WriteLine("⚠️ PessoaSessao.IdAtual é 0. Sessão inválida.");
+                return;
+            }
+
+            // Criar ligação final no Registry
+            var registo = new Registry
+                {
+                    PessoaId = PessoaSessao.IdAtual,
+                    MoodEntryId = MoodId,
+                    ProductivityEntryId = produtividade.Id,
+                    Data = DateTime.Now
+                };
+
+            await RegistryService.SaveAsync(registo);
+
+            Nav.NavigateTo("/historico");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Erro ao guardar produtividade: {ex}");
+        }
+
+
+    }
+
+    protected override void OnInitialized()
+    {
+        CheckLogin.Verificar(Nav);
+    }
+}
+

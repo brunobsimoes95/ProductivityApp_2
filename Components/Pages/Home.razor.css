@@ -1,0 +1,62 @@
+﻿.home-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.home-title {
+    text-align: center;
+    font-size: 24px;
+    color: #eeeeee;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.home-subtitle {
+    text-align: center;
+    color: #bbbbbb;
+    margin-bottom: 25px;
+    font-size: 16px;
+}
+
+.home-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.home-card {
+    background-color: #1e1e2f;
+    padding: 20px;
+    border-radius: 12px;
+    color: white;
+    text-decoration: none;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: transform 0.2s ease, background 0.3s ease;
+}
+
+    .home-card:hover {
+        transform: translateY(-5px);
+        background-color: #292946;
+    }
+
+.emoji {
+    font-size: 42px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+/* Maintain same style for larger screens, with just minor adjustments */
+@media (min-width: 640px) {
+    .home-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 992px) {
+    /* Even on desktop, keep a narrow content area for a mobile-like appearance */
+    .home-container {
+        max-width: 800px;
+    }
+}

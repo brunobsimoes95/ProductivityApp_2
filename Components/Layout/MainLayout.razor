@@ -1,0 +1,28 @@
+﻿@inherits LayoutComponentBase
+
+<div class="layout-dark page">
+    <div class="top-row">
+        <button class="menu-toggle" @onclick="ToggleMenu">
+            ☰ Menu
+        </button>
+        <span class="app-title">ProductivityApp</span>
+    </div>
+
+    <NavMenu @bind-MenuOpen="menuOpen" />
+
+    <main>
+        <article>
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    private bool menuOpen = false;
+
+    private void ToggleMenu()
+    {
+        menuOpen = !menuOpen;
+        StateHasChanged();
+    }
+}

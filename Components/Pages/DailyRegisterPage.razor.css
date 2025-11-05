@@ -1,0 +1,237 @@
+﻿.main-container {
+    background-color: #121212;
+    color: #fff;
+    min-height: 100vh;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-top: 10px;
+}
+
+.page-title {
+    font-size: 1.8rem;
+    color: #fff;
+    font-weight: 500;
+}
+
+.emoji-icon {
+    color: #ff69b4;
+    margin-left: 5px;
+}
+
+.emotions-container {
+    margin-bottom: 30px;
+}
+
+.emotion-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.emotion-card {
+    background-color: #1e1e2f;
+    border: none;
+    border-radius: 10px;
+    padding: 15px;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+    .emotion-card:hover {
+        background-color: #2a2a40;
+        transform: translateY(-3px);
+    }
+
+    .emotion-card.selected {
+        background-color: #3a3a60;
+        box-shadow: 0 0 10px rgba(255, 105, 180, 0.5);
+        transform: translateY(-3px);
+    }
+
+.emoji {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.emotion-text {
+    color: #fff;
+    text-align: center;
+    font-size: 14px;
+}
+
+.form-container {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.dark-textarea {
+    width: 100%;
+    background-color: #1e1e2f;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    resize: vertical;
+    min-height: 100px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+    .dark-textarea::placeholder {
+        color: #6c6c8b;
+    }
+
+.section-container {
+    margin-bottom: 20px;
+}
+
+.section-title {
+    color: #fff;
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+}
+
+.dark-slider {
+    width: 100%;
+    height: 8px;
+    border-radius: 10px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(to right, #ff0000, #ffff00, #00ff00);
+    outline: none;
+}
+
+    .dark-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #fff;
+        cursor: pointer;
+        box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+    }
+
+.wellness-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.input-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+    .input-group label {
+        display: block;
+        margin-bottom: 10px;
+        color: #ccc;
+    }
+
+.number-input {
+    display: flex;
+    align-items: center;
+}
+
+.dark-input {
+    background-color: #1e1e2f;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 10px;
+    text-align: center;
+    width: 60px;
+    margin: 0 10px;
+}
+
+.btn-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background-color: #3a3a60;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stress-selector {
+    display: flex;
+    gap: 5px;
+}
+
+.stress-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 5px;
+    border: none;
+    background-color: #1e1e2f;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+    .stress-btn:hover:not(.selected) {
+        background-color: #2a2a40;
+    }
+
+    .stress-btn.selected {
+        background-color: #ff69b4;
+        color: #fff;
+    }
+
+.btn-guardar {
+    background: linear-gradient(90deg, #ff69b4, #8a2be2);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 14px 30px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: block;
+    margin: 0 auto;
+}
+
+    .btn-guardar:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(255, 105, 180, 0.4);
+    }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .emotion-card {
+        width: 100px;
+        height: 100px;
+    }
+
+    .emoji {
+        font-size: 28px;
+    }
+
+    .emotion-text {
+        font-size: 12px;
+    }
+}
+
+

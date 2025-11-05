@@ -1,0 +1,112 @@
+﻿@page "/coach"
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+@inject CoachAI CoachAI
+
+<div class="coach-container">
+    <div class="coach-header">
+        <h2><i class="oi oi-lightbulb"></i> Coach Virtual</h2>
+        <p class="coach-subtitle">Ajuda semanal para bem-estar e produtividade</p>
+    </div>
+
+    <div class="coach-card">
+        @if (string.IsNullOrEmpty(sugestao))
+        {
+            <div class="coach-empty-state">
+                <img src="/api/placeholder/200/200" alt="Coach virtual" class="coach-image" />
+                <p>Clique no botão abaixo para receber uma sugestão personalizada da semana</p>
+            </div>
+        }
+        else
+        {
+            <div class="coach-suggestion @(isLoading ? "loading" : "")">
+                <div class="coach-suggestion-content">
+                    <p>@sugestao</p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(erro))
+                {
+                    <div class="coach-error">
+                        <p>@erro</p>
+                    </div>
+                }
+
+                <div class="coach-feedback">
+                    <p>Esta sugestão foi útil?</p>
+                    <div class="coach-rating">
+                        <button class="btn-rating" @onclick="() => AvaliarSugestao(1)">👎</button>
+                        <button class="btn-rating" @onclick="() => AvaliarSugestao(2)">👍</button>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="coach-actions">
+            <button class="btn-coach" @onclick="ObterSugestao" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span>Carregando...</span>
+                }
+                else
+                {
+                    <span>Obter sugestão da semana</span>
+                }
+            </button>
+        </div>
+    </div>
+</div>
+
+
+
+@code {
+    private string sugestao = "";
+    private string erro = "";
+    private bool isLoading = false;
+    private int avaliacao = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Inicialização aqui se necessário
+    }
+
+    async Task ObterSugestao()
+    {
+        isLoading = true;
+        erro = "";
+
+        try
+        {
+            var apiKey = Configuration["OpenAI:ApiKey"];
+
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                erro = "❌ API Key não configurada!";
+                sugestao = "";
+                return;
+            }
+
+            var emocoes = new List<string> { "😔", "😠", "😐" };
+
+            sugestao = await CoachAI.GerarSugestaoAsync(
+                6.2, 70, 55, emocoes, apiKey
+            );
+        }
+        catch (Exception ex)
+        {
+            erro = $"Erro ao gerar sugestão: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    void AvaliarSugestao(int valor)
+    {
+        avaliacao = valor;
+       
+        //Eventualmente talvez poder avaliar a sugestão e fazer algo em relação a isso
+    }
+}

@@ -1,0 +1,344 @@
+﻿@page "/goals"
+@using ProdutividadeApp.Models
+@inject GoalService GoalService
+@inject ProductivityService ProductivityService
+@inject RegistryService RegistryService
+@inject MoodService MoodService
+@inject EmotionService EmotionService
+@inject IJSRuntime JS
+
+<div class="goals-container">
+    <h3 class="page-title">🎯 Goals</h3>
+
+    <div class="card new-goal-card">
+        <h4 class="card-title">Create a New Goal</h4>
+
+        <div class="input-group">
+            <label for="goal-type">Goal Type</label>
+            <select id="goal-type" @bind="newGoal.Tipo">
+                <option value="Produtividade">Produtividade</option>
+                <option value="Humor">Humor</option>
+                <option value="Consistencia">Consistência</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label for="titulo">Title</label>
+            <input id="titulo" type="text" @bind="newGoal.Titulo" />
+        </div>
+
+        <div class="input-group">
+            <label for="descricao">Description</label>
+            <input id="descricao" type="text" @bind="newGoal.Descricao" />
+        </div>
+
+        @if (newGoal.Tipo == GoalType.Produtividade)
+        {
+            <div class="input-group">
+                <label for="target">Productivity Target (%)</label>
+                <input id="target" type="number" @bind="newGoal.ProductivityTarget" min="1" max="100" />
+            </div>
+        }
+        else if (newGoal.Tipo == GoalType.Humor)
+        {
+            <div class="input-group">
+                <label for="emoji">Target Emoji</label>
+                @if (emojisDisponiveis.Any())
+                {
+                    <select id="emoji" @bind="newGoal.EmojiAlvo">
+                        <option value="">Escolhe um emoji</option>
+                        @foreach (var emoji in emojisDisponiveis)
+                        {
+                            <option value="@emoji">@emoji</option>
+                        }
+                    </select>
+                }
+                else
+                {
+                    <p class="text-muted">Nenhum emoji disponível ainda.</p>
+                }
+            </div>
+        }
+        else if (newGoal.Tipo == GoalType.Consistencia)
+        {
+            <div class="input-group">
+                <label for="dias">Consecutive Days</label>
+                <input id="dias" type="number" @bind="newGoal.DiasConsecutivos" min="1" />
+            </div>
+        }
+
+        <div class="date-inputs">
+            <div class="input-group">
+                <label for="start-date">Start Date</label>
+                <input id="start-date" type="date" @bind="newGoal.StartDate" />
+            </div>
+            <div class="input-group">
+                <label for="end-date">End Date</label>
+                <input id="end-date" type="date" @bind="newGoal.EndDate" />
+            </div>
+        </div>
+
+        <button class="btn-primary" @onclick="AddGoal">
+            <i class="fas fa-save"></i> Save Goal
+        </button>
+    </div>
+
+    <hr class="divider" />
+
+    @if (goals.Any())
+    {
+        <h4 class="section-title">Your Goals</h4>
+        <div class="goals-grid">
+            @foreach (var goal in goals)
+            {
+                <div class="goal-card">
+                    <div class="goal-header">
+                        <span class="date-range">@goal.StartDate.ToShortDateString() - @goal.EndDate.ToShortDateString()</span>
+                        <span class="target-badge">@goal.Titulo</span>
+                    </div>
+
+                    @if (goalEmEdicao != null && goalEmEdicao.Id == goal.Id)
+                    {
+                        <div class="edit-goal-form">
+                            <input type="text" @bind="goalEmEdicao.Titulo" />
+                            <input type="text" @bind="goalEmEdicao.Descricao" />
+                            <input type="date" @bind="goalEmEdicao.StartDate" />
+                            <input type="date" @bind="goalEmEdicao.EndDate" />
+                            <button class="btn-primary" @onclick="GuardarEdicao">Save</button>
+                            <button class="btn-secondary" @onclick="() => goalEmEdicao = null">Cancel</button>
+                        </div>
+                    }
+                    else
+                    {
+                        @if (progressDict.TryGetValue(goal.Id, out var progresso))
+                        {
+                            <div class="progress-container">
+                                <div class="progress-label">
+                                    <span>Progress</span>
+                                    <span class="progress-value">@($"{progresso:F1}%")</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: @($"{Math.Min(progresso, 100)}%")"></div>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="goal-actions">
+                            <button class="btn-edit" @onclick="() => EditarGoal(goal)">✏️ Edit</button>
+                            <button class="btn-delete" @onclick="() => DeleteGoal(goal)">🗑️ Delete</button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fas fa-clipboard-list empty-icon"></i>
+            <p>You have no goals yet.</p>
+            <p class="empty-hint">Create your first goal to start tracking!</p>
+        </div>
+    }
+</div>
+
+@if (mostrarGigaChad)
+{
+    <div class="giga-modal" @onclick="() => mostrarGigaChad = false">
+        <div class="giga-content">
+            <img src="https://media1.tenor.com/m/epNMHGvRyHcAAAAd/gigachad-chad.gif" alt="Giga Chad" />
+            <h2>Mission accomplished, legend! 💪</h2>
+            <p>Each goal conquered is another step to the top.</p>
+            <p class="click-hint"><em>(Click to close)</em></p>
+        </div>
+    </div>
+}
+
+@code {
+    bool mostrarGigaChad = false;
+    private List<Goal> goals = new();
+    private List<string> emojisDisponiveis = new();
+    private Goal newGoal = new()
+        {
+            StartDate = DateTime.Today,
+            EndDate = DateTime.Today.AddDays(7),
+            Tipo = GoalType.Produtividade,
+            ProductivityTarget = 50
+        };
+
+    private Goal? goalEmEdicao = null;
+    private Dictionary<int, double> progressDict = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        goals = await GoalService.GetAllGoalsAsync();
+        await RecarregarProgresso();
+
+        var emotions = await EmotionService.GetAllAsync();
+        emojisDisponiveis = emotions
+            .Where(e => !string.IsNullOrEmpty(e.Mood))
+            .Select(e => e.Mood!)
+            .Distinct()
+            .ToList();
+    }
+
+    private async Task AddGoal()
+    {
+        await GoalService.AddGoalAsync(newGoal);
+        goals = await GoalService.GetAllGoalsAsync();
+        await RecarregarProgresso();
+        newGoal = new()
+            {
+                StartDate = DateTime.Today,
+                EndDate = DateTime.Today.AddDays(7),
+                Tipo = GoalType.Produtividade,
+                ProductivityTarget = 50
+            };
+    }
+
+    private void EditarGoal(Goal goal)
+    {
+        goalEmEdicao = new Goal
+            {
+                Id = goal.Id,
+                Titulo = goal.Titulo,
+                Descricao = goal.Descricao,
+                StartDate = goal.StartDate,
+                EndDate = goal.EndDate,
+                Tipo = goal.Tipo,
+                ProductivityTarget = goal.ProductivityTarget,
+                EmojiAlvo = goal.EmojiAlvo,
+                DiasConsecutivos = goal.DiasConsecutivos
+            };
+    }
+
+    private async Task GuardarEdicao()
+    {
+        if (goalEmEdicao != null)
+        {
+            await GoalService.UpdateGoalAsync(goalEmEdicao);
+            goals = await GoalService.GetAllGoalsAsync();
+            await RecarregarProgresso();
+            goalEmEdicao = null;
+        }
+    }
+
+    private async Task DeleteGoal(Goal goal)
+    {
+        await GoalService.DeleteGoalAsync(goal);
+        goals = await GoalService.GetAllGoalsAsync();
+        await RecarregarProgresso();
+    }
+
+    private async Task RecarregarProgresso()
+    {
+        progressDict.Clear();
+
+        foreach (var goal in goals)
+        {
+            double progresso = await GetProgressAsync(goal);
+            progressDict[goal.Id] = progresso;
+
+            if (Math.Round(progresso) >= 100 && !goal.IsCompleted)
+            {
+                goal.IsCompleted = true;
+                await GoalService.UpdateGoalAsync(goal);
+
+                mostrarGigaChad = true;
+                await InvokeAsync(StateHasChanged);
+                await Task.Delay(100);
+                await JS.InvokeVoidAsync("dispararConfetis");
+            }
+        }
+    }
+
+    private async Task<double> GetProgressAsync(Goal goal)
+    {
+        try
+        {
+            var registos = await RegistryService.GetAllAsync();
+            var dentroDoIntervalo = registos
+                .Where(r => r.Data >= goal.StartDate && r.Data <= goal.EndDate)
+                .ToList();
+
+            if (!dentroDoIntervalo.Any()) return 0;
+
+            double progresso = 0;
+
+            switch (goal.Tipo)
+            {
+                case GoalType.Produtividade:
+                    var todasEntradas = await ProductivityService.GetAllAsync();
+                    var entradas = todasEntradas
+                        .Where(e => dentroDoIntervalo.Any(r => r.ProductivityEntryId == e.Id))
+                        .ToList();
+
+                    if (!entradas.Any() || goal.ProductivityTarget == null)
+                        return 0;
+
+                    double media = entradas.Average(e => e.NivelProdutividade);
+                    progresso = (media / goal.ProductivityTarget.Value) * 100;
+                    break;
+
+                case GoalType.Humor:
+                    var moodEntries = await MoodService.GetAllAsync();
+                    var emotions = await EmotionService.GetAllAsync();
+
+                    var emojisUsados = (from r in dentroDoIntervalo
+                                        join m in moodEntries on r.MoodEntryId equals m.Id
+                                        join e in emotions on m.EmotionId equals e.Id
+                                        where e.Mood != null
+                                        select e.Mood).ToList();
+
+                    if (!emojisUsados.Any() || string.IsNullOrEmpty(goal.EmojiAlvo))
+                        return 0;
+
+                    int countAlvo = emojisUsados.Count(e => e == goal.EmojiAlvo);
+                    progresso = (double)countAlvo / emojisUsados.Count * 100;
+                    break;
+
+                case GoalType.Consistencia:
+                    var dias = dentroDoIntervalo.Select(r => r.Data.Date).Distinct().OrderBy(d => d).ToList();
+                    if (!dias.Any() || goal.DiasConsecutivos == null) return 0;
+
+                    int maiorStreak = 1, streakAtual = 1;
+                    for (int i = 1; i < dias.Count; i++)
+                    {
+                        if ((dias[i] - dias[i - 1]).TotalDays == 1)
+                        {
+                            streakAtual++;
+                            maiorStreak = Math.Max(maiorStreak, streakAtual);
+                        }
+                        else
+                        {
+                            streakAtual = 1;
+                        }
+                    }
+
+                    progresso = ((double)maiorStreak / goal.DiasConsecutivos.Value) * 100;
+                    break;
+
+                default:
+                    progresso = 0;
+                    break;
+            }
+
+            double finalProgresso = Math.Min(progresso, 100);
+
+            if (Math.Round(finalProgresso) == 100 && !goal.IsCompleted)
+            {
+                mostrarGigaChad = true;
+                await InvokeAsync(StateHasChanged);
+                await Task.Delay(100);
+                await JS.InvokeVoidAsync("dispararConfetis");
+            }
+
+            return finalProgresso;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Erro ao calcular progresso: {ex.Message}");
+            return 0;
+        }
+    }
+}

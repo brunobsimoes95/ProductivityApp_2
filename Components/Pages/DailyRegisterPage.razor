@@ -1,0 +1,169 @@
+﻿@page "/daily-register"
+
+@using ProdutividadeApp.Models
+@using ProdutividadeApp.Controllers
+@using ProdutividadeApp.Services
+@inject EmotionService EmotionService
+@inject MoodService MoodService
+@inject ProductivityService ProductivityService
+@inject RegistryService RegistryService
+@inject NavigationManager Nav
+
+<div class="main-container">
+    <div class="header">
+        <h2 class="page-title">Como te sentes hoje? <span class="emoji-icon">💬</span></h2>
+    </div>
+
+    <div class="emotions-container">
+        <div class="basic-emotions">
+            <div class="emotion-row">
+                <button class="emotion-card @(selectedEmotionId == 1 ? "selected" : "")" @onclick="() => SelectEmotion(1)">
+                    <span class="emoji">😭</span>
+                    <span class="emotion-text">Muito Triste</span>
+                </button>
+
+                <button class="emotion-card @(selectedEmotionId == 2 ? "selected" : "")" @onclick="() => SelectEmotion(2)">
+                    <span class="emoji">😞</span>
+                    <span class="emotion-text">Triste</span>
+                </button>
+
+                <button class="emotion-card @(selectedEmotionId == 3 ? "selected" : "")" @onclick="() => SelectEmotion(3)">
+                    <span class="emoji">😐</span>
+                    <span class="emotion-text">Neutro</span>
+                </button>
+
+                <button class="emotion-card @(selectedEmotionId == 4 ? "selected" : "")" @onclick="() => SelectEmotion(4)">
+                    <span class="emoji">😊</span>
+                    <span class="emotion-text">Feliz</span>
+                </button>
+
+                <button class="emotion-card @(selectedEmotionId == 5 ? "selected" : "")" @onclick="() => SelectEmotion(5)">
+                    <span class="emoji">😃</span>
+                    <span class="emotion-text">Muito Feliz</span>
+                </button>
+
+                <button class="emotion-card @(selectedEmotionId == 6 ? "selected" : "")" @onclick="() => SelectEmotion(6)">
+                    <span class="emoji">🤩</span>
+                    <span class="emotion-text">Entusiasmado</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="complex-emotions">
+            <div class="emotion-row">
+                <button class="emotion-card @(selectedEmotionId == 7 ? "selected" : "")" @onclick="() => SelectEmotion(7)">
+                    <span class="emoji">😤</span>
+                    <span class="emotion-text">Frustrado</span>
+                </button>
+
+                <button class="emotion-card @(selectedEmotionId == 8 ? "selected" : "")" @onclick="() => SelectEmotion(8)">
+                    <span class="emoji">😴</span>
+                    <span class="emotion-text">Cansado</span>
+                </button>
+
+                <button class="emotion-card @(selectedEmotionId == 9 ? "selected" : "")" @onclick="() => SelectEmotion(9)">
+                    <span class="emoji">😡</span>
+                    <span class="emotion-text">Irritado</span>
+                </button>
+
+                <button class="emotion-card @(selectedEmotionId == 10 ? "selected" : "")" @onclick="() => SelectEmotion(10)">
+                    <span class="emoji">🧘</span>
+                    <span class="emotion-text">Calmo</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <textarea class="dark-textarea" placeholder="Descreve um pouco o teu dia..." @bind="descricaoMood"></textarea>
+
+        <div class="section-container">
+            <h3 class="section-title">Nível de Produtividade: @nivelProdutividade%</h3>
+            <input type="range" min="0" max="100" step="1" class="dark-slider" @bind="nivelProdutividade" />
+        </div>
+
+        <textarea class="dark-textarea" placeholder="Descreve a tua produtividade..." @bind="descricaoProd"></textarea>
+
+        <div class="wellness-inputs">
+            <div class="input-group">
+                <label>Horas de Sono</label>
+                <div class="number-input">
+                    <button type="button" @onclick="DecreaseSleep" class="btn-number">-</button>
+                    <input type="number" min="0" max="24" class="dark-input" @bind="sleepHours" />
+                    <button type="button" @onclick="IncreaseSleep" class="btn-number">+</button>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Nível de Stress (1-10)</label>
+                <div class="stress-selector">
+                    @for (int i = 1; i <= 10; i++)
+                    {
+                        var level = i;
+                        <button type="button"
+                                class="stress-btn @(stressLevel == level ? "selected" : "")"
+                                @onclick="() => stressLevel = level">
+                            @level
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <button class="btn-guardar" @onclick="GuardarTudo">Guardar Registo</button>
+    </div>
+</div>
+
+
+@code {
+    List<Emotion> emojis = new();
+    int selectedEmotionId;
+    string descricaoMood = string.Empty;
+    string descricaoProd = string.Empty;
+    int nivelProdutividade = 50;
+    int sleepHours = 7;
+    int stressLevel = 5;
+
+    protected override async Task OnInitializedAsync()
+    {
+        emojis = await EmotionService.GetAllAsync();
+        // Note: We're using hardcoded emotions in the UI,
+        // but we still need to load them to maintain functionality
+    }
+
+    void SelectEmotion(int id)
+    {
+        selectedEmotionId = id;
+    }
+
+    void IncreaseSleep()
+    {
+        if (sleepHours < 24)
+            sleepHours++;
+    }
+
+    void DecreaseSleep()
+    {
+        if (sleepHours > 0)
+            sleepHours--;
+    }
+
+    async Task GuardarTudo()
+    {
+        var mood = await MoodController.RegistarMood(MoodService, selectedEmotionId, descricaoMood);
+        var prod = await ProductivityController.RegistarProdutividade(ProductivityService, nivelProdutividade, descricaoProd);
+
+        var registo = new Registry
+            {
+                MoodEntryId = mood.Id,
+                ProductivityEntryId = prod.Id,
+                PessoaId = PessoaSessao.IdAtual,
+                Data = DateTime.Today,
+                SleepHours = sleepHours,
+                StressLevel = stressLevel
+            };
+
+        await RegistryService.SaveAsync(registo);
+        Nav.NavigateTo("/historico");
+    }
+}

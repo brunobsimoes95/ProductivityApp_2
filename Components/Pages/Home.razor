@@ -1,0 +1,57 @@
+﻿@page "/"
+@using Microsoft.Maui.Controls
+@using Microsoft.Maui.Controls.Compatibility
+@using ProdutividadeApp.Controls
+
+@inject NavigationManager Nav
+
+<div class="home-container">
+    <h1 class="home-title">🌟 Bem-vindo ao ProductivityApp 🌟</h1>
+    <p class="home-subtitle">Organiza o teu bem-estar diário com simplicidade!</p>
+
+    <div class="home-grid">
+
+        <a href="/daily-register" class="home-card">
+            <span class="emoji">📒</span>
+            <h3>Registos</h3>
+            <p>Regista o teu bem estar e produtividade</p>
+        </a>
+
+        <a href="/historico-goals" class="home-card">
+            <span class="emoji">😊</span>
+            <h3>Historico objetivos</h3>
+            <p>Visualiza o historico de objetivos.</p>
+        </a>
+
+         <a href="/historico" class="home-card">
+            <span class="emoji">📜</span>
+            <h3>Histórico</h3>
+            <p>Consulta todos os teus registos anteriores de humor e produtividade.</p>
+        </a>
+
+        <a href="/charts" class="home-card">
+            <span class="emoji">📊</span>
+            <h3>Gráficos</h3>
+            <p>Visualiza a tua evolução semanal de forma clara e intuitiva.</p>
+        </a>
+
+         <a href="/coach" class="home-card">
+            <span class="emoji">🧘</span>
+            <h3>Coach</h3>
+            <p>Coach virtual para te ajudar.</p>
+        </a>
+
+         <a href="/goals" class="home-card">
+            <span class="emoji">📝</span>
+            <h3>Objetivos</h3>
+            <p>Define objetivos.</p>
+        </a>
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        CheckLogin.Verificar(Nav);
+    }
+}

@@ -1,0 +1,245 @@
+﻿@page "/charts"
+@using ProdutividadeApp.Models
+@using ProdutividadeApp.Pages
+@using ProdutividadeApp.Controllers
+@using ProdutividadeApp.Services
+@inject RegistryService RegistryService
+@inject MoodService MoodService
+@inject NavigationManager Nav
+@inject ProductivityService ProductivityService
+@inject EmotionService EmotionService
+@inject IJSRuntime JS
+
+<div class="chart-page-container">
+    <h3 class="chart-main-title">📊 Gráficos Semanais</h3>
+
+    @if (topEmocoesSemana?.Count > 0)
+    {
+        <div class="emotions-card">
+            <h4 class="section-title">🔥 Emoções mais frequentes nesta semana</h4>
+            <ul class="emotions-list">
+                @foreach (var emo in topEmocoesSemana)
+                {
+                    <li class="emotion-item">
+                        <span class="emotion-emoji">@emo.Emoji</span>
+                        <span class="emotion-count"><strong>@emo.Count vezes</strong></span>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+
+    @if (chartData?.Count > 0)
+    {
+        <MoodProductivityCharts Dados="@chartData" />
+
+        <div class="sleep-chart-container" id="sleepChartContainer">
+            <h4 class="section-title">😴 Sono vs Produtividade</h4>
+            <div class="chart-wrapper">
+                <canvas id="sleepProductivityChart"></canvas>
+            </div>
+            <div class="chart-insights" id="sleepInsights">
+                @if (!string.IsNullOrWhiteSpace(sleepInsight) && sleepInsight != "Analisando seus dados de sono e produtividade...")
+                {
+                    <div class="insight-card">
+                        <h5>Análise do Sono</h5>
+                        <p>@sleepInsight</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="export-section">
+            <button class="btn-export @(processando ? "processing" : "")" @onclick="ExportarPdf" disabled="@processando">
+                @if (processando)
+                {
+                    <span><i class="fa fa-spinner fa-spin"></i> Processando...</span>
+                }
+                else
+                {
+                    <span>📤 Exportar Relatório PDF</span>
+                }
+            </button>
+
+            @if (!string.IsNullOrEmpty(mensagem))
+            {
+                <div class="alert @(mensagemTipo == "erro" ? "alert-danger" : "alert-success")">
+                    @((MarkupString)mensagem)
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="no-data-message">
+            <p>Sem dados para mostrar...</p>
+            <small>Registre seu humor e produtividade para visualizar os gráficos</small>
+        </div>
+    }
+</div>
+
+@code {
+    private class SleepData
+    {
+        public double SleepHours { get; set; }
+        public double Productivity { get; set; }
+    }
+
+    private List<DailyChartData> chartData = new();
+    private List<(string Emoji, int Count)> topEmocoesSemana = new();
+    private string? mensagem;
+    private string mensagemTipo = "sucesso";
+    private bool processando = false;
+    private string sleepInsight = "Analisando seus dados de sono e produtividade...";
+
+    protected override async Task OnInitializedAsync()
+    {
+        chartData = await HistoryController.GetWeeklyChartDataAsync(
+            RegistryService, MoodService, ProductivityService, EmotionService);
+
+        topEmocoesSemana = await HistoryController.GetTop3EmocoesSemanaAsync(
+            RegistryService, MoodService, ProductivityService, EmotionService);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initChartEffects");
+        }
+
+        var startOfWeek = DateTime.Today.AddDays(-(int)DateTime.Today.DayOfWeek + 1);
+        var endOfWeek = startOfWeek.AddDays(7);
+
+        var historico = (await HistoryController.GetHistoricoAsync(
+            RegistryService, MoodService, ProductivityService, EmotionService))
+            .Where(r => r.Data >= startOfWeek && r.Data < endOfWeek)
+            .ToList();
+
+        var scatterData = historico
+            .Where(r => r.SleepHours > 0 && r.Produtividade > 0)
+            .Select(r => new { x = r.SleepHours, y = r.Produtividade })
+            .ToList();
+
+        if (scatterData.Any())
+        {
+            var sleepDataList = scatterData.Select(d => new SleepData
+                {
+                    SleepHours = d.x,
+                    Productivity = d.y
+                }).ToList();
+
+            GenerateSleepInsight(sleepDataList);
+
+            var chartOptions = new
+            {
+                pointBackgroundColor = "#3db9dc",
+                pointBorderColor = "#ffffff",
+                pointHoverBackgroundColor = "#2b92b8",
+                pointHoverBorderColor = "#ffffff",
+                pointHoverRadius = 8,
+                pointRadius = 6,
+                backgroundColor = "rgba(61, 185, 220, 0.1)",
+                borderColor = "rgba(61, 185, 220, 0.8)",
+                trendlineColor = "rgba(255, 99, 132, 0.8)"
+            };
+
+            await JS.InvokeVoidAsync("renderImprovedScatterChart", "sleepProductivityChart", scatterData, chartOptions);
+        }
+
+        await JS.InvokeVoidAsync("setupChartContainer", "sleepChartContainer");
+    }
+
+    private void GenerateSleepInsight(List<SleepData> data)
+    {
+        if (data.Count == 0)
+        {
+            sleepInsight = "Sem dados suficientes para análise.";
+            return;
+        }
+
+        double avgSleep = data.Average(d => d.SleepHours);
+        double avgProd = data.Average(d => d.Productivity);
+
+        var groupedData = data.GroupBy(d => d.SleepHours)
+                             .Where(g => g.Count() >= 2)
+                             .Select(g => new
+                             {
+                                 Hours = g.Key,
+                                 AvgProd = g.Average(p => p.Productivity),
+                                 Count = g.Count()
+                             })
+                             .OrderByDescending(g => g.AvgProd)
+                             .ToList();
+
+        if (groupedData.Any())
+        {
+            var bestHours = groupedData.First();
+            sleepInsight = $"Você tem média de {avgSleep:F1}h de sono com produtividade média de {avgProd:F1}%. " +
+                          $"Seu melhor desempenho ({bestHours.AvgProd:F1}%) ocorre com {bestHours.Hours}h de sono " +
+                          $"(baseado em {bestHours.Count} registros).";
+
+            if (bestHours.Hours > avgSleep)
+            {
+                sleepInsight += $" Tente dormir um pouco mais para melhorar seu desempenho.";
+            }
+            else if (bestHours.Hours < avgSleep && bestHours.Hours >= 7)
+            {
+                sleepInsight += $" Seu sono atual pode estar excedendo o ideal para sua produtividade.";
+            }
+        }
+        else
+        {
+            sleepInsight = $"Tem uma média {avgSleep:F1}h de sono com produtividade média de {avgProd:F1}%. ";
+
+            if (avgSleep < 7)
+            {
+                sleepInsight += "Tente dormir pelo menos 7 horas para potencialmente melhorar sua produtividade.";
+            }
+        }
+    }
+
+    async Task ExportarPdf()
+    {
+        try
+        {
+            processando = true;
+            StateHasChanged();
+
+            if (chartData == null || !chartData.Any())
+            {
+                mensagem = "⚠️ Não há dados disponíveis para exportar";
+                mensagemTipo = "erro";
+                return;
+            }
+
+            if (!chartData.Any(d => d.Value > 0))
+            {
+                mensagem = "⚠️ Não há registros de produtividade para exportar";
+                mensagemTipo = "erro";
+                return;
+            }
+
+            await JS.InvokeVoidAsync("animateExportButton");
+            await PdfExporter.GenerateWeeklyReportAsync(chartData);
+            mensagem = "✅ PDF criado com sucesso!";
+            mensagemTipo = "sucesso";
+        }
+        catch (Exception ex)
+        {
+            mensagem = $"❌ Erro ao gerar PDF: <br/><small>{ex.Message}</small>";
+            mensagemTipo = "erro";
+            Console.WriteLine($"Erro na exportação: {ex}");
+        }
+        finally
+        {
+            processando = false;
+            StateHasChanged();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        CheckLogin.Verificar(Nav);
+    }
+}

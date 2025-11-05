@@ -1,0 +1,45 @@
+﻿@page "/mood"
+@using ProdutividadeApp.Controllers
+@using ProdutividadeApp.Models
+@using ProdutividadeApp.Services
+@inject NavigationManager Nav
+@inject EmotionService EmotionService
+@inject MoodService MoodService
+
+<h2 class="titulo">Como te sentes hoje? 🧠</h2>
+
+<div class="emoji-container">
+    @foreach (var emo in emojis)
+    {
+        <button class="emoji-card @(selectedEmotionId == emo.Id ? "selected" : "")"
+                @onclick="() => selectedEmotionId = emo.Id">
+            @emo.Mood
+        </button>
+    }
+</div>
+
+<textarea @bind="descricao" placeholder="Descreve um pouco o teu dia..." class="descricao-textarea"></textarea>
+<button @onclick="GuardarMood" class="btn-guardar">Guardar e passar para produtividade</button>
+
+@code {
+    int selectedEmotionId;
+    string descricao = string.Empty;
+    List<Emotion> emojis = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await EmotionService.SeedAsync();
+        emojis = await EmotionService.GetAllAsync();
+    }
+
+    async Task GuardarMood()
+    {
+        var mood = await MoodController.RegistarMood(MoodService, selectedEmotionId, descricao);
+        Nav.NavigateTo($"/produtividade/{mood.Id}");
+    }
+
+    protected override void OnInitialized()
+    {
+        CheckLogin.Verificar(Nav);
+    }
+}

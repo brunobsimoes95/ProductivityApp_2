@@ -1,0 +1,47 @@
+﻿@page "/historico-goals"
+@using ProdutividadeApp.Models
+@inject GoalService GoalService
+
+<div class="goals-container">
+    <h3 class="page-title">📜 Histórico de Objetivos</h3>
+
+    @if (concluidos.Any())
+    {
+        <div class="goals-grid">
+            @foreach (var goal in concluidos)
+            {
+                <div class="goal-card completed">
+                    <div class="goal-header">
+                        <span class="date-range">@goal.StartDate.ToShortDateString() - @goal.EndDate.ToShortDateString()</span>
+                        <span class="target-badge">@goal.Titulo</span>
+                    </div>
+                    <p>@goal.Descricao</p>
+                    <span class="goal-type-label">Tipo: @goal.Tipo</span>
+                    <span class="goal-status concluido">✅ Concluído</span>
+                    <div class="progress-bar static">
+                        <div class="progress-fill" style="width: 100%"></div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fas fa-check-circle empty-icon"></i>
+            <p>Sem objetivos concluídos ainda.</p>
+            <p class="empty-hint">Conclui um objetivo para ver aqui o teu progresso épico!</p>
+        </div>
+    }
+</div>
+
+
+@code {
+    private List<Goal> concluidos = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var todos = await GoalService.GetAllGoalsAsync();
+        concluidos = todos.Where(g => g.IsCompleted).OrderByDescending(g => g.EndDate).ToList();
+    }
+}

@@ -1,0 +1,49 @@
+﻿@page "/login"
+@using ProdutividadeApp.Controllers
+@using ProdutividadeApp.Services
+@inject PessoaService PessoaService
+@inject NavigationManager Nav
+
+<h2 class="titulo">Iniciar Sessão</h2>
+
+@if (!string.IsNullOrEmpty(mensagemErro))
+{
+    <p style="color: red">@mensagemErro</p>
+}
+
+<div class="form-login">
+    <input @bind="email" placeholder="Email" />
+    <input @bind="password" placeholder="Password" type="password" />
+    <button @onclick="FazerLogin">Entrar</button>
+</div>
+
+<div class="text-center mt-3">
+    <a href="/register" class="link-registar">Ainda não tens conta? Regista-te aqui</a>
+</div>
+
+@code {
+    // Variáveis para armazenar os dados do utilizador
+    string email = "";
+    string password = "";
+    string mensagemErro = "";
+
+    // protected override async Task OnInitializedAsync()
+    // {
+    //     // await PessoaService.SeedAsync(); // Cria utilizador de teste se não existir
+    //     //era utilizado para criar um utilizador de teste, mas não é necessário, fica comentado para caso seja necessário
+    // }
+
+    // Método para fazer login
+    async Task FazerLogin()
+    {
+        bool sucesso = await PessoaController.LoginAsync(PessoaService, email, password);
+        if (sucesso)
+        {
+            Nav.NavigateTo("/");
+        }
+        else
+        {
+            mensagemErro = "Email ou password incorretos.";
+        }
+    }
+}

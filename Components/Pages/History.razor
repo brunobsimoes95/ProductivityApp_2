@@ -1,0 +1,327 @@
+﻿@page "/historico"
+@using ProdutividadeApp.Models
+@using ProdutividadeApp.Controllers
+@using ProdutividadeApp.Services
+@inject RegistryService RegistryService
+@inject MoodService MoodService
+@inject ProductivityService ProductivityService
+@inject EmotionService EmotionService
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<div class="header-container">
+    <h3 class="titulo">Histórico de Registos</h3>
+
+    @if (historico.Count > 0)
+    {
+        <div class="filtros-container">
+            <div class="filtro">
+                <label for="dataInicio">De:</label>
+                <input type="date" id="dataInicio" @bind="dataInicio" @bind:format="yyyy-MM-dd" />
+            </div>
+            <div class="filtro">
+                <label for="dataFim">Até:</label>
+                <input type="date" id="dataFim" @bind="dataFim" @bind:format="yyyy-MM-dd" />
+            </div>
+            <button class="btn-filtrar" @onclick="FiltrarHistorico">
+                <span>🔍 Filtrar</span>
+            </button>
+            <button class="btn-limpar" @onclick="LimparFiltros">
+                <span>🔄 Limpar</span>
+            </button>
+        </div>
+    }
+</div>
+
+@if (exibirMensagem)
+{
+    <div class="mensagem @mensagemTipo">
+        @mensagemTexto
+    </div>
+}
+
+@if (historico.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <p>Ainda não tens registos guardados.</p>
+        <a href="registar" class="btn-registar">Criar Novo Registo</a>
+    </div>
+}
+else
+{
+    <div class="registo-container">
+        @foreach (var registo in historicoFiltrado)
+        {
+            <div class="registo-card">
+                @if (editandoId == registo.Id)
+                {
+                    <div class="registo-edicao">
+                        <div class="edicao-header">
+                            <h4>Editar Registo</h4>
+                            <div class="data-exibicao">@registo.Data.ToString("dd/MM/yyyy")</div>
+                        </div>
+
+                        <div class="edicao-form">
+                            <div class="form-group">
+                                <label>Emoji:</label>
+                                <select @bind="selectedEmojiId" class="select-emoji">
+                                    @foreach (var emoji in emojisDisponiveis)
+                                    {
+                                        <option value="@emoji.Id">@emoji.Mood</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Como te sentes:</label>
+                                <input type="text" @bind="registoTemp.MoodDescricao" placeholder="Descrição do humor" class="input-text" />
+                            </div>
+
+                            <div class="form-group">
+                                <label>Nível de Produtividade:</label>
+                                <div class="prod-slider-container">
+                                    <input type="range" @bind="registoTemp.Produtividade" min="0" max="100" step="5" class="prod-slider" />
+                                    <span class="prod-value">@registoTemp.Produtividade%</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Descrição da Produtividade:</label>
+                                <input type="text" @bind="registoTemp.ProdDescricao" placeholder="Descrição da produtividade" class="input-text" />
+                            </div>
+
+                            <div class="form-group">
+                                <label>Horas de Sono:</label>
+                                <input type="number" @bind="registoTemp.SleepHours" min="0" max="24" class="input-number" />
+                            </div>
+
+                            <div class="form-group">
+                                <label>Nível de Stress:</label>
+                                <input type="number" @bind="registoTemp.StressLevel" min="0" max="10" class="input-number" />
+                            </div>
+                        </div>
+
+                        <div class="edicao-actions">
+                            <button class="btn-editar" @onclick="SalvarEdicao">💾 Guardar</button>
+                            <button class="btn-cancelar" @onclick="CancelarEdicao">❌ Cancelar</button>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="registo-top">
+                        <div class="registo-emoji">@registo.Emoji</div>
+                        <div class="registo-data">@registo.Data.ToString("dddd, dd/MM/yyyy")</div>
+                    </div>
+
+                    <div class="registo-content">
+                        @if (!string.IsNullOrEmpty(registo.MoodDescricao))
+                        {
+                            <div class="registo-mood">
+                                <span class="label">Como te sentiste:</span>
+                                <div class="registo-desc">@registo.MoodDescricao</div>
+                            </div>
+                        }
+
+                        <div class="registo-prod-container">
+                            <div class="registo-prod-header">
+                                <span class="label">Produtividade:</span>
+                                <span class="prod-percent">@registo.Produtividade%</span>
+                            </div>
+
+                            <div class="prod-bar-container">
+                                <div class="prod-bar" style="width: @registo.Produtividade%;"></div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(registo.ProdDescricao))
+                            {
+                                <div class="registo-desc">@registo.ProdDescricao</div>
+                            }
+                        </div>
+                        <div class="registo-desc">
+                            <strong>😴 Horas de Sono:</strong> @registo.SleepHours
+                        </div>
+                        <div class="registo-desc">
+                            <strong>💢 Nível de Stress:</strong> @registo.StressLevel
+                        </div>
+                    </div>
+
+                    <div class="registo-actions">
+                        <button class="btn-editar" @onclick="() => EditarRegisto(registo)">📝 Editar</button>
+                        <button class="btn-apagar" @onclick="() => ApagarRegisto(registo.Id)">🗑️ Apagar</button>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @if (historico.Count > 0 && historicoFiltrado.Count == 0)
+    {
+        <div class="empty-filter">
+            <p>Nenhum registo encontrado para o período selecionado.</p>
+            <button class="btn-limpar" @onclick="LimparFiltros">🔄 Limpar Filtros</button>
+        </div>
+    }
+}
+
+@code {
+    List<RegistoCompleto> historico = new();
+    List<RegistoCompleto> historicoFiltrado = new();
+    int editandoId = -1;
+    RegistoCompleto registoTemp = new();
+    List<Emotion> emojisDisponiveis = new();
+    int selectedEmojiId = 0;
+
+    // Filtros
+    DateTime? dataInicio = null;
+    DateTime? dataFim = null;
+
+    // Mensagens de feedback
+    bool exibirMensagem = false;
+    string mensagemTexto = "";
+    string mensagemTipo = "sucesso"; // sucesso ou erro
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Carregar os emojis disponíveis
+        emojisDisponiveis = await EmotionService.GetAllAsync();
+        await CarregarHistorico();
+    }
+
+    async Task CarregarHistorico()
+    {
+        historico = await HistoryController.GetHistoricoAsync(RegistryService, MoodService, ProductivityService, EmotionService);
+        AplicarFiltros();
+    }
+
+    void AplicarFiltros()
+    {
+        historicoFiltrado = historico.ToList();
+
+        if (dataInicio.HasValue)
+        {
+            historicoFiltrado = historicoFiltrado.Where(r => r.Data.Date >= dataInicio.Value.Date).ToList();
+        }
+
+        if (dataFim.HasValue)
+        {
+            historicoFiltrado = historicoFiltrado.Where(r => r.Data.Date <= dataFim.Value.Date).ToList();
+        }
+
+        // Ordenar por data decrescente (mais recentes primeiro)
+        historicoFiltrado = historicoFiltrado.OrderByDescending(r => r.Data).ToList();
+    }
+
+    void FiltrarHistorico()
+    {
+        AplicarFiltros();
+    }
+
+    void LimparFiltros()
+    {
+        dataInicio = null;
+        dataFim = null;
+        AplicarFiltros();
+    }
+
+    void EditarRegisto(RegistoCompleto registo)
+    {
+        editandoId = registo.Id;
+        registoTemp = new RegistoCompleto
+            {
+                Id = registo.Id,
+                MoodDescricao = registo.MoodDescricao,
+                ProdDescricao = registo.ProdDescricao,
+                Produtividade = registo.Produtividade,
+                Data = registo.Data,
+                MoodEntryId = registo.MoodEntryId,
+                ProductivityEntryId = registo.ProductivityEntryId,
+                Emoji = registo.Emoji,
+                SleepHours = registo.SleepHours,
+                StressLevel = registo.StressLevel
+            };
+
+        // Encontrar emoji pelo Mood
+        var emoji = emojisDisponiveis.FirstOrDefault(e => e.Mood == registo.Emoji);
+        selectedEmojiId = emoji?.Id ?? emojisDisponiveis.FirstOrDefault()?.Id ?? 0;
+    }
+
+    void CancelarEdicao()
+    {
+        editandoId = -1;
+        registoTemp = new();
+    }
+
+    async Task SalvarEdicao()
+    {
+        try
+        {
+            var mood = await MoodService.GetByIdAsync(registoTemp.MoodEntryId);
+            if (mood != null)
+            {
+                mood.Descricao = registoTemp.MoodDescricao;
+                mood.EmotionId = selectedEmojiId;
+                await MoodService.SaveAsync(mood);
+            }
+
+            var prod = await ProductivityService.GetByIdAsync(registoTemp.ProductivityEntryId);
+            if (prod != null)
+            {
+                prod.Descricao = registoTemp.ProdDescricao;
+                prod.NivelProdutividade = registoTemp.Produtividade;
+                await ProductivityService.SaveAsync(prod);
+            }
+
+            editandoId = -1;
+            await CarregarHistorico();
+
+            ExibirMensagem("Registo atualizado com sucesso!", "sucesso");
+        }
+        catch (Exception ex)
+        {
+            ExibirMensagem($"Erro ao salvar: {ex.Message}", "erro");
+        }
+    }
+
+    async Task ApagarRegisto(int id)
+    {
+        var confirmar = await JS.InvokeAsync<bool>("confirm", "Tens a certeza que queres apagar este registo?");
+        if (confirmar)
+        {
+            try
+            {
+                var registo = await RegistryService.GetByIdAsync(id);
+                if (registo != null)
+                {
+                    await RegistryService.DeleteAsync(registo);
+                    await CarregarHistorico();
+                    ExibirMensagem("Registo apagado com sucesso!", "sucesso");
+                }
+            }
+            catch (Exception ex)
+            {
+                ExibirMensagem($"Erro ao apagar: {ex.Message}", "erro");
+            }
+        }
+    }
+
+    void ExibirMensagem(string texto, string tipo)
+    {
+        mensagemTexto = texto;
+        mensagemTipo = tipo;
+        exibirMensagem = true;
+
+        // Auto-hide after 4 seconds
+        Task.Delay(4000).ContinueWith(_ =>
+        {
+            exibirMensagem = false;
+            StateHasChanged();
+        });
+    }
+
+    protected override void OnInitialized()
+    {
+        CheckLogin.Verificar(Nav);
+    }
+}
